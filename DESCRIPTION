@@ -17,6 +17,8 @@ Description: Implements the Hatemi-J (2008) cointegration test which allows
     along with endogenously determined break dates. Critical values are based 
     on simulations from Hatemi-J (2008) <doi:10.1007/s00181-007-0175-9>.
 License: GPL-3
+URL: https://github.com/muhammedalkhalaf/hatemicoint
+BugReports: https://github.com/muhammedalkhalaf/hatemicoint/issues
 Encoding: UTF-8
 Depends:
     R (>= 3.5.0)
