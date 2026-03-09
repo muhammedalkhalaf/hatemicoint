@@ -1,7 +1,6 @@
 # hatemicoint
 
 <!-- badges: start -->
-[![R-CMD-check](https://github.com/merwanroudane/hatemicoint/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/merwanroudane/hatemicoint/actions/workflows/R-CMD-check.yaml)
 [![CRAN status](https://www.r-pkg.org/badges/version/hatemicoint)](https://CRAN.R-project.org/package=hatemicoint)
 <!-- badges: end -->
 
@@ -23,7 +22,6 @@ install.packages("hatemicoint")
 
 # Or install the development version from GitHub
 # install.packages("devtools")
-devtools::install_github("merwanroudane/hatemicoint")
 ```
 
 ## Usage
@@ -103,8 +101,6 @@ Hatemi-J, A. (2008). Tests for cointegration with two unknown regime shifts with
 Gregory, A.W., & Hansen, B.E. (1996). Residual-based tests for cointegration in models with regime shifts. *Journal of Econometrics*, 70(1), 99-126. [DOI: 10.1016/0304-4076(69)41685-7](https://doi.org/10.1016/0304-4076(69)41685-7)
 
 ## Author
-
-Dr. Merwan Roudane (<merwanroudane920@gmail.com>)
 
 ## License
 MIT

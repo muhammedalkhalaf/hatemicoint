@@ -49,7 +49,7 @@ in models with regime shifts. \emph{Journal of Econometrics}, 70(1), 99-126.
 \doi{10.1016/0304-4076(69)41685-7}
 }
 \author{
-\strong{Maintainer}: Merwan Roudane \email{merwanroudane920@gmail.com}
+\strong{Maintainer}:  
 
 }
 \keyword{package}
