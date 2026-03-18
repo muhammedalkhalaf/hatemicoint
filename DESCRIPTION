@@ -1,7 +1,7 @@
 Package: hatemicoint
 Type: Package
 Title: Hatemi-J Cointegration Test with Two Unknown Regime Shifts
-Version: 1.0.0
+Version: 1.0.1
 Authors@R: c(
     person("Muhammad", "Alkhalaf", 
            email = "muhammedalkhalaf@gmail.com",
