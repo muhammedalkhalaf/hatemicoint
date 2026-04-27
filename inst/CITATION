@@ -1,4 +1,4 @@
-﻿citHeader("To cite hatemicoint in publications use:")
+citHeader("To cite hatemicoint in publications use:")
 
 bibentry(
   bibtype  = "Manual",
