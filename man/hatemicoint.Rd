@@ -7,10 +7,11 @@
 hatemicoint(
   y,
   x,
-  maxlags = 8,
-  lag_selection = c("tstat", "aic", "sic"),
-  kernel = c("iid", "bartlett", "qs"),
+  maxlags = NULL,
+  lag_selection = c("tstat", "aic", "sic", "fixed"),
+  kernel = c("qs", "bartlett", "iid"),
   bwl = NULL,
+  prewhite = TRUE,
   trimming = 0.15
 )
 }
@@ -20,19 +21,28 @@ hatemicoint(
 \item{x}{Numeric matrix or vector. The independent variable(s) (must be I(1)).
 Maximum of 4 regressors allowed (k <= 4).}
 
-\item{maxlags}{Integer. Maximum number of lags for ADF test. Default is 8.}
+\item{maxlags}{Integer. Maximum number of lags for the ADF regression (the
+lag itself when \code{lag_selection = "fixed"}). Default \code{NULL}
+means \code{floor(4 * (n/100)^(1/4))}.}
 
-\item{lag_selection}{Character. Lag selection criterion: \code{"tstat"} (default),
-\code{"aic"}, or \code{"sic"}.}
+\item{lag_selection}{Character. Lag selection rule: \code{"tstat"}
+(default), \code{"aic"}, \code{"sic"}, or \code{"fixed"}.}
 
-\item{kernel}{Character. Kernel for long-run variance estimation in PP tests:
-\code{"iid"} (default), \code{"bartlett"}, or \code{"qs"} (quadratic spectral).}
+\item{kernel}{Character. Kernel for the long-run variance in the Phillips
+statistics: \code{"qs"} (quadratic spectral, default), \code{"bartlett"},
+or \code{"iid"} (no correction).}
 
-\item{bwl}{Integer. Bandwidth for kernel estimation. If NULL (default), computed
-as \code{round(4 * (n/100)^(2/9))}.}
+\item{bwl}{Numeric. Bandwidth for the kernel. If \code{NULL} (default), the
+Andrews (1991) automatic bandwidth is used for \code{"qs"} and
+\code{round(4 * (n/100)^(2/9))} for \code{"bartlett"}. Ignored for
+\code{"iid"}.}
 
-\item{trimming}{Numeric. Trimming parameter for break point search. Must be
-between 0 and 0.5 (exclusive). Default is 0.15.}
+\item{prewhite}{Logical. AR(1) prewhitening of the kernel estimator
+(Andrews and Monahan 1992). Default \code{TRUE}. Ignored for
+\code{"iid"}.}
+
+\item{trimming}{Numeric. Trimming parameter for the break point search. Must
+be between 0 and 0.5 (exclusive). Default is 0.15.}
 }
 \value{
 An object of class \code{"hatemicoint"} containing:
@@ -40,12 +50,15 @@ An object of class \code{"hatemicoint"} containing:
   \item{adf_min}{Minimum ADF* test statistic}
   \item{tb1_adf}{First break location (observation number) for ADF*}
   \item{tb2_adf}{Second break location (observation number) for ADF*}
+  \item{lag_adf}{ADF lag used at the ADF* break pair}
   \item{zt_min}{Minimum Zt* test statistic}
   \item{tb1_zt}{First break location for Zt*}
   \item{tb2_zt}{Second break location for Zt*}
+  \item{bwl_zt}{Bandwidth used at the Zt* break pair (\code{NA} for "iid")}
   \item{za_min}{Minimum Za* test statistic}
   \item{tb1_za}{First break location for Za*}
   \item{tb2_za}{Second break location for Za*}
+  \item{bwl_za}{Bandwidth used at the Za* break pair (\code{NA} for "iid")}
   \item{cv_adfzt}{Critical values for ADF* and Zt* tests (1\%, 5\%, 10\%)}
   \item{cv_za}{Critical values for Za* test (1\%, 5\%, 10\%)}
   \item{nobs}{Number of observations}
@@ -53,14 +66,17 @@ An object of class \code{"hatemicoint"} containing:
   \item{maxlags}{Maximum lags used}
   \item{lag_selection}{Lag selection method used}
   \item{kernel}{Kernel used}
-  \item{bwl}{Bandwidth used}
+  \item{bwl}{Bandwidth argument (\code{NA} when chosen automatically)}
+  \item{prewhite}{Whether prewhitening was used}
   \item{trimming}{Trimming parameter}
+  \item{n_skipped}{Number of break pairs skipped because a statistic could
+    not be computed}
 }
 }
 \description{
 Performs the Hatemi-J (2008) cointegration test which allows for two unknown
 structural breaks (regime shifts) in the cointegrating relationship. The test
-searches over all possible break date combinations and returns the minimum
+searches over all admissible break date pairs and returns the minimum
 test statistics along with the endogenously determined break dates.
 }
 \details{
@@ -68,21 +84,108 @@ The Hatemi-J (2008) test extends the Gregory and Hansen (1996) cointegration
 test by allowing for two structural breaks instead of one. The test is based
 on the residuals from the cointegrating regression with regime shift dummies:
 
-\deqn{y_t = \alpha_0 + \alpha_1 D_{1t} + \alpha_2 D_{2t} + \beta_0' x_t + 
+\deqn{y_t = \alpha_0 + \alpha_1 D_{1t} + \alpha_2 D_{2t} + \beta_0' x_t +
       \beta_1' D_{1t} x_t + \beta_2' D_{2t} x_t + u_t}
 
-where \eqn{D_{1t}} and \eqn{D_{2t}} are dummy variables for the two regime
-shifts.
+where \eqn{D_{1t} = 1} if \eqn{t > tb_1} and \eqn{D_{2t} = 1} if
+\eqn{t > tb_2}.
 
-Three test statistics are computed:
+Three test statistics are computed for every break pair and the smallest
+value over the grid is reported (equations 7 to 9 of the paper):
 \itemize{
-  \item \strong{ADF*}: Modified Augmented Dickey-Fuller test on residuals
-  \item \strong{Zt*}: Phillips-Perron Z_t test on residuals
-  \item \strong{Za*}: Phillips-Perron Z_alpha test on residuals
+  \item \strong{ADF*}: t-ratio of \eqn{\delta} in
+    \eqn{\Delta \hat u_t = \delta \hat u_{t-1} + \sum_{i=1}^p \phi_i
+    \Delta \hat u_{t-i} + e_t} (no intercept).
+  \item \strong{Zt*}: Phillips \eqn{Z_t} statistic, equation (6) (see below
+    for the square root).
+  \item \strong{Za*}: Phillips \eqn{Z_\alpha} statistic, equation (5).
 }
 
+\strong{Phillips statistics (equations 3 to 6).} With \eqn{\hat\rho} the OLS
+coefficient of \eqn{\hat u_{t-1}} on \eqn{\hat u_t} (no intercept),
+\eqn{v_t = \hat u_t - \hat\rho \hat u_{t-1}}, autocovariances
+\eqn{\hat\gamma(j) = n^{-1} \sum_t v_t v_{t-j}} (equation 4), and
+\eqn{S = \sum_{t=1}^{n-1} \hat u_t^2}, the long-run variance is
+\eqn{\hat\sigma^2 = \hat\gamma(0) + 2 \sum_{j \ge 1} w(j/B) \hat\gamma(j)},
+the one-sided correction is \eqn{\hat\lambda = (\hat\sigma^2 - \hat\gamma(0))/2},
+\eqn{\hat\rho^* = (\sum_{t=1}^{n-1} \hat u_t \hat u_{t+1} - n \hat\lambda)/S},
+\eqn{Z_\alpha = n(\hat\rho^* - 1)} and
+\eqn{Z_t = (\hat\rho^* - 1)/\sqrt{\hat\sigma^2 / S}}. The factor \eqn{n} in
+front of \eqn{\hat\lambda} compensates the \eqn{1/n} in equation (4), as in
+Phillips (1987); equation (3) of the paper prints the difference without it.
+The \eqn{Z_t} formula is the one of Gregory and Hansen (1996, p. 105) and
+Phillips (1987); equation (6) of the paper as printed omits the square root
+in the denominator (that form would grow with \eqn{n}).
+All sums use the normalisation of the paper (\eqn{n}, not \eqn{n - 1}).
+
+\strong{Long-run variance.} The paper (footnote 3) estimates
+\eqn{\hat\sigma^2} with a prewhitened quadratic spectral (QS) kernel with
+first-order autoregressive prewhitening and the automatic bandwidth of
+Andrews (1991), following Andrews and Monahan (1992). This is the default
+since version 1.1.0 (\code{kernel = "qs"}, \code{prewhite = TRUE},
+\code{bwl = NULL}) and is implemented as follows for every break pair:
+an AR(1) without intercept is fitted to \eqn{v_t}, its coefficient
+\eqn{a_1} is capped at 0.97 in absolute value, the AR(1) residuals
+\eqn{e_t} are used to compute the Andrews bandwidth
+\eqn{B = 1.3221 (\hat\alpha(2) T)^{1/5}} with
+\eqn{\hat\alpha(2) = 4 \hat\phi^2 / (1 - \hat\phi)^4}, where \eqn{\hat\phi}
+is the AR(1) coefficient of \eqn{e_t}, also capped at 0.97 in absolute
+value (a package choice, not part of Andrews 1991), and \eqn{T} is the
+length of \eqn{e_t}; if the bandwidth is zero (\eqn{\hat\phi = 0}) the
+kernel estimate reduces to \eqn{\hat\gamma(0)} of \eqn{e_t}. The QS
+kernel \eqn{k(x) = 3/z^2 (\sin z / z - \cos z)}, \eqn{z = 6\pi x/5}, is
+applied to all lags \eqn{j = 1, \ldots, T - 1} of \eqn{e_t} (the QS kernel
+is not truncated), and the result is recoloured by dividing by
+\eqn{(1 - a_1)^2}. With \code{kernel = "bartlett"} the weights are
+\eqn{1 - j/B} for \eqn{j < B} and zero beyond, that is the kernel
+\eqn{k(x) = 1 - |x|} evaluated at \eqn{x = j/B} as in the paper's
+\eqn{w(j/B)} notation; versions before 1.1.0 used the Newey-West form
+\eqn{1 - j/(B + 1)}. This is the package's choice, not a correction from
+the paper. With integer \eqn{B} only lags \eqn{1, \ldots, B - 1} enter, so
+\code{bwl = 1} gives no correction. If \code{bwl} is \code{NULL} the
+Bartlett bandwidth is \code{round(4 (n/100)^(2/9))} (the rule used by
+earlier versions). With \code{kernel = "iid"} no serial-correlation
+correction is applied and \eqn{Z_t} equals the Dickey-Fuller t-ratio up to
+the residual-variance divisor. Versions before 1.1.0 used
+\code{kernel = "iid"} by default.
+
+\strong{ADF lag selection.} The paper does not state a lag rule. The
+package compares the candidate lags \eqn{0, \ldots, maxlags} on a common
+sample (the first \code{maxlags} usable observations are dropped for every
+candidate) and computes the final statistic for the chosen lag on the
+largest sample available for that lag. \code{"tstat"} is the
+general-to-specific rule (largest lag whose last coefficient has
+\eqn{|t| > 1.645}), \code{"aic"} and \code{"sic"} minimise
+\eqn{\log(RSS/T) + c (p + 1)/T} with \eqn{c = 2} and \eqn{c = \log T}, and
+\code{"fixed"} uses \code{maxlags} lags. The lag is re-selected for every
+break pair, as in Gregory and Hansen (1996) style infimum tests. The
+default \code{maxlags = floor(4 (n/100)^(1/4))} is the Schwert rule and is
+the package's choice, not the paper's.
+
+\strong{Break grid.} With trimming \eqn{\tau} (default 0.15), \eqn{tb_1}
+runs from \eqn{\lceil \tau n \rceil} to \eqn{\lfloor (1 - 2\tau) n \rfloor}
+and \eqn{tb_2} from \eqn{tb_1 + \lceil \tau n \rceil} to
+\eqn{\lfloor (1 - \tau) n \rfloor}, so that \eqn{tb_1 \ge \tau n},
+\eqn{tb_2 \le (1 - \tau) n} and \eqn{tb_2 - tb_1 \ge \tau n} for every
+\eqn{n}. Break pairs for which a statistic cannot be computed (singular
+regressor matrix or non-positive long-run variance) are skipped with a
+warning and never replaced by a substitute value.
+
 The null hypothesis is no cointegration. Rejection occurs when the test
-statistic is smaller (more negative) than the critical value.
+statistic is smaller (more negative) than the critical value. The critical
+values of Table 1 are asymptotic (response-surface intercepts). In a
+Monte Carlo with the data generating process of Section 4 of the paper
+(n = 100, m = 1, 400 replications, package defaults) the empirical 5
+percent null quantiles were about -6.6 for ADF*, -6.5 for Zt* and -62 for
+Za*, against the asymptotic values -6.015, -6.015 and -76.003, so at
+n = 100 ADF* and Zt* reject more often than the nominal level and Za*
+much less often. With the asymptotic Table 1 critical values the package
+therefore does not reproduce Table 2 of the paper at n = 100: a 200
+replication run with the defaults gave rejection frequencies of 0.175
+(ADF*), 0.140 (Zt*) and 0.000 (Za*) under the null against 0.032, 0.069
+and 0.069 in Table 2, and the ADF* size depends strongly on the lag rule
+(0.005 with a fixed lag of 4, 0.105 with lag 0, 0.175 with the default
+"tstat" rule). The package does not adjust for this.
 }
 \examples{
 \donttest{
@@ -109,7 +212,18 @@ Hatemi-J, A. (2008). Tests for cointegration with two unknown regime shifts
 with an application to financial market integration. \emph{Empirical Economics},
 35, 497-505. \doi{10.1007/s00181-007-0175-9}
 
-Gregory, A.W., & Hansen, B.E. (1996). Residual-based tests for cointegration
+Gregory, A.W. and Hansen, B.E. (1996). Residual-based tests for cointegration
 in models with regime shifts. \emph{Journal of Econometrics}, 70(1), 99-126.
 \doi{10.1016/0304-4076(69)41685-7}
+
+Andrews, D.W.K. (1991). Heteroskedasticity and autocorrelation consistent
+covariance matrix estimation. \emph{Econometrica}, 59(3), 817-858.
+\doi{10.2307/2938229}
+
+Andrews, D.W.K. and Monahan, J.C. (1992). An improved heteroskedasticity and
+autocorrelation consistent covariance matrix estimator. \emph{Econometrica},
+60(4), 953-966. \doi{10.2307/2951574}
+
+Phillips, P.C.B. (1987). Time series regression with a unit root.
+\emph{Econometrica}, 55(2), 277-301. \doi{10.2307/1913237}
 }

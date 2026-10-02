@@ -44,12 +44,25 @@ Hatemi-J, A. (2008). Tests for cointegration with two unknown regime shifts
 with an application to financial market integration. \emph{Empirical Economics},
 35, 497-505. \doi{10.1007/s00181-007-0175-9}
 
-Gregory, A.W., & Hansen, B.E. (1996). Residual-based tests for cointegration
+Gregory, A.W. and Hansen, B.E. (1996). Residual-based tests for cointegration
 in models with regime shifts. \emph{Journal of Econometrics}, 70(1), 99-126.
 \doi{10.1016/0304-4076(69)41685-7}
 }
+\seealso{
+Useful links:
+\itemize{
+  \item \url{https://github.com/muhammedalkhalaf/hatemicoint}
+  \item Report bugs at \url{https://github.com/muhammedalkhalaf/hatemicoint/issues}
+}
+
+}
 \author{
-\strong{Maintainer}:  
+\strong{Maintainer}: Muhammad Alkhalaf \email{muhammedalkhalaf@gmail.com} (\href{https://orcid.org/0009-0002-2677-9246}{ORCID}) [copyright holder]
+
+Authors:
+\itemize{
+  \item Muhammad Alkhalaf \email{muhammedalkhalaf@gmail.com} (\href{https://orcid.org/0009-0002-2677-9246}{ORCID}) [copyright holder]
+}
 
 }
 \keyword{package}

@@ -62,13 +62,20 @@ All statistics test the null hypothesis of **no cointegration** against the alte
 
 ```r
 hatemicoint(y, x,
-  maxlags = 8,              # Maximum lags for ADF
-  lag_selection = "tstat",  # Lag selection: "tstat", "aic", or "sic"
-  kernel = "iid",           # Kernel: "iid", "bartlett", or "qs"
-  bwl = NULL,               # Bandwidth (auto-computed if NULL)
+  maxlags = NULL,           # Max ADF lags; NULL = floor(4 * (n/100)^(1/4))
+  lag_selection = "tstat",  # "tstat", "aic", "sic" or "fixed"
+  kernel = "qs",            # "qs" (default), "bartlett" or "iid"
+  bwl = NULL,               # Bandwidth; NULL = Andrews (1991) rule for "qs"
+  prewhite = TRUE,          # AR(1) prewhitening (Andrews and Monahan 1992)
   trimming = 0.15           # Trimming for break search
 )
 ```
+
+The Phillips statistics follow equations (3) to (6) of Hatemi-J (2008). By
+default the long-run variance is estimated with a prewhitened quadratic
+spectral kernel and the Andrews (1991) automatic bandwidth, as in footnote 3
+of the paper. Versions before 1.1.0 used `kernel = "iid"` and contained
+errors in the Zt statistic and in the kernel correction; see `NEWS.md`.
 
 ## Critical Values
 
@@ -98,9 +105,9 @@ Critical values from Hatemi-J (2008, Table 1):
 
 Hatemi-J, A. (2008). Tests for cointegration with two unknown regime shifts with an application to financial market integration. *Empirical Economics*, 35, 497-505. [DOI: 10.1007/s00181-007-0175-9](https://doi.org/10.1007/s00181-007-0175-9)
 
-Gregory, A.W., & Hansen, B.E. (1996). Residual-based tests for cointegration in models with regime shifts. *Journal of Econometrics*, 70(1), 99-126. [DOI: 10.1016/0304-4076(69)41685-7](https://doi.org/10.1016/0304-4076(69)41685-7)
+Gregory, A.W. and Hansen, B.E. (1996). Residual-based tests for cointegration in models with regime shifts. *Journal of Econometrics*, 70(1), 99-126. [DOI: 10.1016/0304-4076(69)41685-7](https://doi.org/10.1016/0304-4076(69)41685-7)
 
 ## Author
 
 ## License
-MIT
+GPL-3
